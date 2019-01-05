@@ -2,8 +2,7 @@ import torch
 import torch.optim as optim
 
 from models.ssd.ssd_base import SSDLoss
-from models.ssd.vgg16_ssd import VGG16SSD
-from models.ssd.resnet_ssd import ResnetSSD
+from models.ssd import Resnet18SSD, Resnet34SSD, Resnet50SSD, Resnet101SSD, Resnet152SSD, VGG16SSD
 
 from pytrainer.lr_scheduler import Step_decay
 from pytrainer.callbacks import LearningRateScheduler
@@ -13,7 +12,7 @@ def ModelFactory(backbone, head, **kwargs):
         n_classes = kwargs["n_classes"]
         model = VGG16SSD(n_classes)
         criterion = SSDLoss()
-        optimizer = optim.SGD(model.parameters(), 1e-3, momentum=0.9, weight_decay=5e-4)
+        optimizer = optim.SGD(model.parameters(), kwargs["lr"], momentum=0.9, weight_decay=5e-4)
 
         if "vgg_weights" in kwargs:
             weights = torch.load(kwargs["vgg_weights"])
@@ -26,12 +25,27 @@ def ModelFactory(backbone, head, **kwargs):
     elif "resnet" in backbone and head == "ssd":
         n_classes = kwargs["n_classes"]
         resnet_idx = int(backbone.replace("resnet", ""))
-
-        model = ResnetSSD(n_classes, resnet_idx, pretrained=True)
+        if resnet_idx == 18:
+            model = Resnet18SSD(n_classes, pretrained=True)
+            lr_schedule = None
+        elif resnet_idx == 34:
+            model = Resnet34SSD(n_classes, pretrained=True)
+            lr_schedule = None
+        elif resnet_idx == 50:
+            model = Resnet50SSD(n_classes, pretrained=True)
+            lr_schedule = None
+        elif resnet_idx == 101:
+            model = Resnet101SSD(n_classes, pretrained=True)
+            lr_schedule = None
+        elif resnet_idx == 152:
+            model = Resnet152SSD(n_classes, pretrained=True)
+            lr_schedule = None
+        else:
+            raise Exception("Unknown resnet index {}".format(resnet_idx))
         criterion = SSDLoss()
-        optimizer = optim.SGD(model.parameters(), 1e-3, momentum=0.9, weight_decay=5e-4)
+        optimizer = optim.SGD(model.parameters(), kwargs["lr"], momentum=0.9, weight_decay=5e-4)
 
-        lr_schedule = None
+
 
         return model, criterion, optimizer, lr_schedule
     else:

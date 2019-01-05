@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -126,3 +125,23 @@ class ResnetSSD(nn.Module):
             batch_selected_labels.append(labels)
 
         return batch_selected_boxes, batch_selected_scores, batch_selected_labels
+
+class Resnet18SSD(ResnetSSD):
+    def __init__(self, n_classes, pretrained=False):
+        super().__init__(n_classes, resnet_idx=18, pretrained=pretrained)
+
+class Resnet34SSD(ResnetSSD):
+    def __init__(self, n_classes, pretrained=False):
+        super().__init__(n_classes, resnet_idx=34, pretrained=pretrained)
+
+class Resnet50SSD(ResnetSSD):
+    def __init__(self, n_classes, pretrained=False):
+        super().__init__(n_classes, resnet_idx=50, pretrained=pretrained)
+
+class Resnet101SSD(ResnetSSD):
+    def __init__(self, n_classes, pretrained=False):
+        super().__init__(n_classes, resnet_idx=101, pretrained=pretrained)
+
+class Resnet152SSD(ResnetSSD):
+    def __init__(self, n_classes, pretrained=False):
+        super().__init__(n_classes, resnet_idx=152, pretrained=pretrained)

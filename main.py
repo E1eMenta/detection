@@ -21,6 +21,8 @@ parser.add_argument('--head', default="ssd", type=str,
                     help='Detection head. Only ssd now')
 parser.add_argument('--vgg-weights', default="vgg16_reducedfc.pth", type=str,
                     help='Backbone weights for vgg16')
+parser.add_argument('--lr', default=1e-3, type=float,
+                    help='learning rate')
 args = parser.parse_args()
 
 
@@ -30,7 +32,8 @@ model, criterion, optimizer, lr_schedule = ModelFactory(
     args.backbone,
     args.head,
     n_classes=train_loader.dataset.num_classes(),
-    vgg_weights=args.vgg_weights
+    vgg_weights=args.vgg_weights,
+    lr=args.lr
 )
 
 validator = DetectionValidator(
