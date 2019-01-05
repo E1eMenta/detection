@@ -1,16 +1,16 @@
 import torch
 import torch.nn.init as init
 from torch import nn
-import torch.functional as F
+import torch.nn.functional as F
 
 import numpy as np
 
 from utils.detection_utils import SSDDecode_np, NMS_np
-from models.refinedet_base import RefineDetHead
+from models.ssd.ssd_base import SSDDetectionHead
 
-def vgg(cfg, i=3, batch_norm=False):
+def vgg(cfg, batch_norm=False):
     layers = []
-    in_channels = i
+    in_channels = 3
     for v in cfg:
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
@@ -23,7 +23,7 @@ def vgg(cfg, i=3, batch_norm=False):
             else:
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
-    pool5 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+    pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
     conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)
     conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
     layers += [pool5, conv6,
@@ -49,53 +49,70 @@ class L2Norm(nn.Module):
         out = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x) * x
         return out
 
-class VGG16_RefineDet(nn.Module):
+class VGG16SSD(nn.Module):
     def __init__(self, n_classes):
         super().__init__()
+
         channels = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M', 512, 512, 512]
         self.backbone = nn.ModuleList(vgg(channels))
 
-        self.extras = nn.Sequential(
+        self.extras0 = nn.Sequential(
             nn.Conv2d(1024, 256, kernel_size=1), nn.ReLU(),
             nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=1), nn.ReLU(),
         )
+        self.extras1 = nn.Sequential(
+            nn.Conv2d(512, 128, kernel_size=1), nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1), nn.ReLU(),
+        )
+        self.extras2 = nn.Sequential(
+            nn.Conv2d(256, 128, kernel_size=1), nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3), nn.ReLU(),
+        )
+        self.extras3 = nn.Sequential(
+            nn.Conv2d(256, 128, kernel_size=1), nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3), nn.ReLU(),
+        )
 
         self.feature_map_sizes = [
-            (40, 40),
-            (20, 20),
+            (38, 38),
+            (19, 19),
             (10, 10),
-            (5, 5)
+            (5, 5),
+            (3, 3),
+            (1, 1)
         ]
         self.aspect_ratios = [
             [2, 1, 1/2],
-            [2, 1, 1/2],
-            [2, 1, 1/2],
-            [2, 1, 1/2]
+            [2, 1/2, 1, 3, 1/3],
+            [2, 1/2, 1, 3, 1/3],
+            [2, 1/2, 1, 3, 1/3],
+            [2,  1, 1/2],
+            [2,  1, 1/2]
         ]
-        out_channels = [512, 512, 1024, 512]
+        out_channels = [512, 1024, 512, 256, 256, 256]
 
-        self.L2Norm_4_3 = L2Norm(512, 10)
-        self.L2Norm_5_3 = L2Norm(512, 8)
-        self.detection_head = RefineDetHead(self.feature_map_sizes, self.aspect_ratios, n_classes, out_channels)
+        self.L2Norm = L2Norm(512, 20)
+        self.detection_head = SSDDetectionHead(self.feature_map_sizes, self.aspect_ratios, n_classes, out_channels)
 
 
     def forward(self, x):
         for k in range(23):
             x = self.backbone[k](x)
         backbone0 = x
-        for k in range(23, 30):
+        for k in range(23, len(self.backbone)):
             x = self.backbone[k](x)
         backbone1 = x
-        for k in range(30, len(self.backbone)):
-            x = self.backbone[k](x)
-        backbone2 = x
 
-        extras = self.extras(backbone2)
+        extras0 = self.extras0(backbone1)
+        extras1 = self.extras1(extras0)
+        extras2 = self.extras2(extras1)
+        extras3 = self.extras3(extras2)
 
-        feature_maps = [self.L2Norm_4_3(backbone0), self.L2Norm_5_3(backbone1), backbone2, extras]
-        objectness, refine_loc, conf, loc, anchors = self.detection_head(feature_maps)
+        feature_maps = [self.L2Norm(backbone0), backbone1, extras0, extras1, extras2, extras3]
 
-        return objectness, refine_loc, conf, loc, anchors
+        conf, loc, anchors = self.detection_head(feature_maps)
+
+        return conf, loc, anchors
 
     def transform_output(self, model_output, conf_thresh=0.5, nms_threshold=0.5):
         conf_batch, loc_batch, anchors = model_output
@@ -129,7 +146,3 @@ class VGG16_RefineDet(nn.Module):
             batch_selected_labels.append(labels)
 
         return batch_selected_boxes, batch_selected_scores, batch_selected_labels
-
-# model = VGG16_RefineDet(20)
-# x = torch.zeros((10, 3, 320, 320))
-# out = model(x)

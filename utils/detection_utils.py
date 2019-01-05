@@ -221,7 +221,7 @@ def SSDEncode_batch(targets, anchors, variances=(0.1, 0.2), threshold=0.5):
 
     return conf_batch, loc_batch
 
-def GuaranteedEncode_batch_np(targets, anchors, variances=(0.1, 0.2), threshold=0.5):
+def GuaranteeEncode_batch_np(targets, anchors, variances=(0.1, 0.2), threshold=0.5):
     anchors_num = anchors.shape[0]
     conf_batch = []
     loc_batch = []
@@ -266,7 +266,7 @@ def GuaranteedEncode_batch_np(targets, anchors, variances=(0.1, 0.2), threshold=
 
     return conf_batch, loc_batch
 
-def GuaranteedEncode_batch(targets, anchors, variances=(0.1, 0.2), threshold=0.5):
+def GuaranteeEncode_batch(targets, anchors, variances=(0.1, 0.2), threshold=0.5):
     anchors_num = anchors.shape[0]
     conf_batch = []
     loc_batch = []

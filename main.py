@@ -1,84 +1,37 @@
 import sys
-
-import torch
-import torch.optim as optim
-from  torch.utils.data import DataLoader
+import argparse
 
 from pytrainer import Trainer
-from pytrainer.callbacks import LearningRateScheduler
-from pytrainer.lr_scheduler import Step_decay
 
-from data.augmentations import SSDAugmentation, BaseTransform
-from data.coco import CocoDataset
-from data.voc import VOCDataset
-from data import detection_collate
-
-from models.resnet_ssd import ResnetSSD
-from models.ssd_base import SSDLoss
-from models.vgg16_ssd import VGG16_SSD
-from models.refinedet_base import RefineDetLoss
-
+from data_factory import DataFactory
+from model_factory import ModelFactory
 
 from validation import DetectionValidator
 
-#============================================================
-#COCO
-# dataset = CocoDataset("/mnt/dataSSD/renat/mscoco/", set_name="train2017", show=False, transform=SSDAugmentation())
-# lr_schedule = Step_decay((280000, 360000, 400000))
-# testset = CocoDataset("/mnt/dataSSD/renat/mscoco/", set_name="val2017", show=False, transform=BaseTransform())
-# test_loader = DataLoader(
-#     testset,
-#     batch_size=256,
-#     collate_fn=detection_collate,
-#     pin_memory=True
-# )
-# 
-# train_loader = DataLoader(
-#     dataset,
-#     batch_size=64,
-#     shuffle=True,
-#     collate_fn=detection_collate,
-#     pin_memory=True
-#     )
-#============================================================
-#VOC
-dataset = VOCDataset("/home/renatkhiz/data/VOCdevkit", transform=SSDAugmentation())
-lr_callback = LearningRateScheduler(Step_decay([15000, 25000]), type="batch")
-testset = VOCDataset("/home/renatkhiz/data/VOCdevkit", transform=BaseTransform(), image_sets=[('2007', "trainval")])
+parser = argparse.ArgumentParser(description='PyTorch Detection Training')
+parser.add_argument('--dataset', default="voc", type=str,
+                    help='Dataset name (voc or coco)')
+parser.add_argument('--root', default="data", type=str,
+                    help='Path to dataset root dir')
+parser.add_argument('--batch-size', default=32, type=int,
+                    help='mini-batch size (default: 32)')
+parser.add_argument('--backbone', default="resnet50", type=str,
+                    help='CNN backbone of detector (resnet(18,34,50,101,152), vgg16)')
+parser.add_argument('--head', default="ssd", type=str,
+                    help='Detection head. Only ssd now')
+parser.add_argument('--vgg-weights', default="vgg16_reducedfc.pth", type=str,
+                    help='Backbone weights for vgg16')
+args = parser.parse_args()
 
-train_loader = DataLoader(
-    dataset,
-    batch_size=48,
-    shuffle=True,
-    collate_fn=detection_collate,
-    pin_memory=True,
-    num_workers=3
-    )
 
-test_loader = DataLoader(
-    testset,
-    batch_size=48,
-    collate_fn=detection_collate,
-    pin_memory=True
+train_loader, test_loader = DataFactory(args.dataset, root=args.root, batch_size=args.batch_size)
+
+model, criterion, optimizer, lr_schedule = ModelFactory(
+    args.backbone,
+    args.head,
+    n_classes=train_loader.dataset.num_classes(),
+    vgg_weights=args.vgg_weights
 )
-
-#============================================================
-# Resnet
-# resnet_idx=18
-# model = ResnetSSD(dataset.num_classes(), resnet_idx=resnet_idx, pretrained=True)
-#============================================================
-# VGG
-model = VGG16_SSD(dataset.num_classes())
-weights = torch.load("vgg16_reducedfc.pth")
-model.backbone.load_state_dict(weights)
-
-#============================================================
-
-
-
-criterion = SSDLoss()
-
-optimizer = optim.SGD(model.parameters(), 1e-3, momentum=0.9, weight_decay=5e-4)
 
 validator = DetectionValidator(
     test_loader,
@@ -96,12 +49,12 @@ t.compile(
     optimizer=optimizer,
     criterion=criterion,
     validation=validator,
-    callbacks=[lr_callback]
+    callbacks=[lr_schedule]
 )
 t.fit(
     train_loader,
     report_steps=500,
     val_steps=5000,
     save_steps=5000,
-    tag=dataset.name,
+    tag=train_loader.dataset.name,
 )

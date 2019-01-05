@@ -9,7 +9,7 @@ from torchvision.models.resnet import resnet18, resnet34, resnet50, resnet101, r
 
 from utils.detection_utils import SSDDecode_np, NMS_np
 
-from models.ssd_base import SSDDetectionHead
+from models.ssd.ssd_base import SSDDetectionHead
 
 backbone_dict = {
     18:  resnet18,
