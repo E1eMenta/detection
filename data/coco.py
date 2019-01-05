@@ -1,23 +1,19 @@
 import os
-import sys
-import os
-import torch
+import urllib.request
+import zipfile
 import numpy as np
-import random
 import cv2
 
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 from pycocotools.coco import COCO
 
 from utils.vis import draw_boxes
 
-from albumentations import Compose, RandomSizedCrop, SmallestMaxSize
-
 class CocoDataset(Dataset):
     """Coco dataset."""
 
-    def __init__(self, root_dir, set_name='train2017', transform=None, show=False):
+    def __init__(self, root_dir, set_name='train2017', transform=None, show=False, download=False):
         """
         Args:
             root_dir (string): COCO directory.
@@ -29,6 +25,23 @@ class CocoDataset(Dataset):
         self.transform = transform
         self.show = show
         self.name = "COCO2017"
+
+        if download and not os.path.exists(os.path.join(root_dir, "train2017")):
+            print("Download COCO")
+            def download(path, root):
+                basename = os.path.basename(path)
+                urllib.request.urlretrieve(path, os.path.join(root, basename))
+
+                with zipfile.ZipFile(os.path.join(root, basename), 'r') as zip_ref:
+                    zip_ref.extractall(root)
+
+                os.remove(os.path.join(root, basename))
+
+            download("http://images.cocodataset.org/zips/val2017.zip", root_dir)
+            download("http://images.cocodataset.org/zips/train2017.zip", root_dir)
+            download("http://images.cocodataset.org/annotations/annotations_trainval2017.zip", root_dir)
+
+            print("Done")
 
         annotation_path = os.path.join(
             self.root_dir,
@@ -143,13 +156,6 @@ class CocoDataset(Dataset):
         return float(image['width']) / float(image['height'])
 
     def num_classes(self):
-        return 80
+        return len(self.class_names)
 
-
-# aug = [SmallestMaxSize(max_size=300), RandomSizedCrop([300, 300], 300, 300), ]
-# transform = Compose(aug, bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.5, 'label_fields': ['labels']})
-# # transform = None
-#
-# dataset = CocoDataset("/mnt/dataSSD/renat/mscoco/", set_name="val2017", show=True, transform=transform)
-# for i in range(len(dataset)):
-#     a = dataset[i]
+# CocoDataset("../../coco", download=True)

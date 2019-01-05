@@ -1,11 +1,12 @@
-import numpy as np
-from  torch.utils.data import Dataset
-import xml.etree.ElementTree as ET
-import os.path as osp
+import os
 import cv2
-
-from albumentations import Compose, RandomSizedCrop, SmallestMaxSize
-from data.augmentations import SSDAugmentation, BaseTransform
+import tarfile
+import numpy as np
+import urllib.request
+import os.path as osp
+from shutil import move
+from torch.utils.data import Dataset
+import xml.etree.ElementTree as ET
 
 from utils.vis import draw_boxes
 
@@ -57,7 +58,7 @@ class VOCAnnotationTransform(object):
 
 
 
-VOC_CLASSES = (  # always index 0
+VOC_CLASSES = (
     'aeroplane', 'bicycle', 'bird', 'boat',
     'bottle', 'bus', 'car', 'cat', 'chair',
     'cow', 'diningtable', 'dog', 'horse',
@@ -80,7 +81,7 @@ class VOCDataset(Dataset):
     """
 
     def __init__(self, root, image_sets=[('2007', 'trainval'), ('2012', 'trainval')],
-                 transform=None, max_ims=None, show=False):
+                 transform=None, max_ims=None, show=False, download=False):
         self.root = root
         self.image_set = image_sets
         self.transform = transform
@@ -89,6 +90,27 @@ class VOCDataset(Dataset):
         self.target_transform = VOCAnnotationTransform()
         self.name = 'VOC0712'
         self.class_names = VOC_CLASSES
+
+        if download and not os.path.exists(os.path.join(root, "VOC2012")):
+            print("Download VOC")
+            def download(path, root):
+                basename = os.path.basename(path)
+                urllib.request.urlretrieve(path, os.path.join(root, basename))
+
+                tar = tarfile.open(os.path.join(root, basename))
+                tar.extractall(path=root)
+                tar.close()
+
+                os.remove(os.path.join(root, basename))
+
+            download("http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar", root)
+            download("http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtest_06-Nov-2007.tar", root)
+            download("http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar", root)
+
+            for filename in os.listdir(os.path.join(root, 'VOCdevkit')):
+                move(os.path.join(root, 'VOCdevkit', filename), os.path.join(root, filename))
+            os.rmdir(os.path.join(root, 'VOCdevkit'))
+            print("Done")
 
         self._annopath = osp.join('%s', 'Annotations', '%s.xml')
         self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
@@ -144,10 +166,4 @@ class VOCDataset(Dataset):
     def num_classes(self):
         return len(VOC_CLASSES)
 
-# aug = [SmallestMaxSize(max_size=301), RandomSizedCrop([300, 300], 300, 300), ]
-# transform = Compose(aug, bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.5, 'label_fields': ['labels']})
-
-# transform = SSDAugmentation()
-# dataset = VOCDataset("/home/renatkhiz/VOCdevkit", transform=transform, show=True)
-# for i in range(len(dataset)):
-#     dataset[i]
+# VOCDataset("../../voc", download=True)

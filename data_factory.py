@@ -11,7 +11,7 @@ def DataFactory(dataset, **kwargs):
         root = kwargs["root"]
         batch_size = kwargs["batch_size"]
 
-        dataset = VOCDataset(root, transform=SSDAugmentation())
+        dataset = VOCDataset(root, transform=SSDAugmentation(), download=True)
         valset = VOCDataset(root, transform=BaseTransform(), image_sets=[('2007', "trainval")])
 
         train_loader = DataLoader(
@@ -35,7 +35,7 @@ def DataFactory(dataset, **kwargs):
         root = kwargs["root"]
         batch_size = kwargs["batch_size"]
 
-        dataset = CocoDataset(root, set_name="train2017", show=False, transform=SSDAugmentation())
+        dataset = CocoDataset(root, set_name="train2017", show=False, transform=SSDAugmentation(), download=True)
         valset = CocoDataset(root, set_name="val2017", show=False, transform=BaseTransform())
 
         val_loader = DataLoader(
