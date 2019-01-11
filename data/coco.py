@@ -45,7 +45,6 @@ class CocoDataset(Dataset):
 
         annotation_path = os.path.join(
             self.root_dir,
-            "annotations_trainval2017",
             'annotations',
             'instances_' + self.set_name + '.json'
         )
