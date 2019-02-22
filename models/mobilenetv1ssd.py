@@ -6,7 +6,7 @@ from torch.nn import Conv2d, Sequential, ModuleList, ReLU
 from utils import weight_init
 
 from .backbones import MobileNetV1
-from pydet.head.ssd import SSDHead, AnchorCellCreator
+from pydet.head.ssd import SSDHead, AnchorCellCreator, SSDPostprocess
 
 
 aspect_ratios = [
@@ -16,6 +16,14 @@ aspect_ratios = [
     [2, 1/2, 1, 3, 1/3],
     [2, 1/2, 1, 3, 1/3],
     [2, 1/2, 1, 3, 1/3]
+]
+sizes = [
+    (19, 19),
+    (10, 10),
+    (5, 5),
+    (3, 3),
+    (2, 2),
+    (1, 1),
 ]
 
 class MobileNetV1SSD(nn.Module):
@@ -57,6 +65,7 @@ class MobileNetV1SSD(nn.Module):
         self.head = SSDHead(
             num_classes,
             [512, 1024, 512, 256, 256, 256],
+            sizes,
             AnchorCellCreator(aspect_ratios, smin=0.2, smax=0.95)
         )
 
@@ -80,12 +89,26 @@ class MobileNetV1SSD(nn.Module):
             outs.append(x)
 
         conf, loc, anchors = self.head(outs)
-        anchors = anchors.to(torch.device("cpu"))
 
-        return conf, loc, anchors
+        if self.training:
+            return conf, loc, anchors
+        else:
+            train_out = (conf, loc, anchors)
+            return (train_out, SSDPostprocess(train_out))
 
     def finetune_from(self, path):
-        weights = torch.load(path)
+        weights = torch.load(path, map_location='cpu')
+        own_state = self.state_dict()
+        for name, param in weights.items():
+            if name not in own_state:
+                continue
+            if 'head' in name:
+                continue
+            own_state[name].copy_(param)
 
-        self.base_net.load_state_dict(weights.base_net.state_dict())
-        self.extras.load_state_dict(weights.extras.state_dict())
+        # self.load_state_dict(weights, strict=False)
+
+        weight_init(self.head)
+
+        # self.base_net.load_state_dict(weights.base_net.state_dict())
+        # self.extras.load_state_dict(weights.extras.state_dict())
