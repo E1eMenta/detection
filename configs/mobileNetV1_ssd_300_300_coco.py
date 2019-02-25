@@ -8,7 +8,6 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from models import MobileNetV1SSD
 from pydet.criterion.ssd import MultiboxLoss
-from pydet.head.ssd import SSDPostprocess
 
 from pydet.data import CocoDataset, detection_collate
 from pydet.data.transform import Compose, PhotometricDistort, Expand, RandomSSDCrop
@@ -87,4 +86,4 @@ scheduler = CosineAnnealingLR(optimizer, T_max=max_iterations)
 
 # Validation
 #====================================================================================
-validator = DetectionValidator(val_loader, criterion)
+validator = DetectionValidator(num_classes, criterion)

@@ -97,18 +97,13 @@ class MobileNetV1SSD(nn.Module):
             return (train_out, SSDPostprocess(train_out))
 
     def finetune_from(self, path):
+        weight_init(self)
         weights = torch.load(path, map_location='cpu')
+        load_state = weights.state_dict()
         own_state = self.state_dict()
-        for name, param in weights.items():
+        for name, param in load_state.items():
             if name not in own_state:
                 continue
             if 'head' in name:
                 continue
             own_state[name].copy_(param)
-
-        # self.load_state_dict(weights, strict=False)
-
-        weight_init(self.head)
-
-        # self.base_net.load_state_dict(weights.base_net.state_dict())
-        # self.extras.load_state_dict(weights.extras.state_dict())

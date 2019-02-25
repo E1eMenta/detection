@@ -1,15 +1,18 @@
 import os
 import time
+import argparse
 
 import torch
 
 from utils import AverageMeter, load_config
 from tensorboardX import SummaryWriter
 
-
+parser = argparse.ArgumentParser(description='Train detector')
+parser.add_argument('--config', type=str, help='Path to model config')
+args = parser.parse_args()
 
 if __name__ == '__main__':
-    config = load_config("configs/mobileNetV1_ssd_300_300_coco.py")
+    config = load_config(args.config)
 
     clip_norm = config.clip_norm if hasattr(config, 'clip_norm') else None
 
@@ -81,8 +84,8 @@ if __name__ == '__main__':
                 batch_time.reset()
 
             if iteration % config.val_steps == 0:
+                model.eval()
                 with torch.no_grad():
-                    model.eval()
                     params = {
                         "epoch": epoch,
                         "iteration": iteration,
@@ -90,11 +93,12 @@ if __name__ == '__main__':
                         "eval_writer": eval_writer,
                         "tensorboard": True
                     }
-                    config.validator(model, params)
-                    model.train()
+                    config.validator(config.val_loader, model, params)
 
-                model_path = os.path.join(savedir, f"weights_iter{iteration}.pth")
+                model_path = os.path.join(savedir, f"weights_iter{iteration}.pt")
                 torch.save(model, model_path)
+
+                model.train()
 
             end = time.time()
 
