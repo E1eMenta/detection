@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
             iteration += 1
             if iteration > config.max_iterations:
-                break
+                exit()
 
             if iteration % config.debug_steps == 0:
                 print(f"Epoch: {epoch}, Step: {iteration}, Batch time {batch_time.avg:.3f},", end=" ")
@@ -95,7 +95,7 @@ if __name__ == '__main__':
                     }
                     config.validator(config.val_loader, model, params)
 
-                model_path = os.path.join(savedir, f"weights_iter{iteration}.pt")
+                model_path = os.path.join(savedir, f"weights_iter{iteration}.pth")
                 torch.save(model, model_path)
 
                 model.train()
