@@ -8,7 +8,7 @@ from utils import AverageMeter, load_config
 from tensorboardX import SummaryWriter
 
 parser = argparse.ArgumentParser(description='Train detector')
-parser.add_argument('--config', type=str, help='Path to model config')
+parser.add_argument('--config', required=True, type=str, help='Path to model config')
 args = parser.parse_args()
 
 if __name__ == '__main__':
