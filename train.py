@@ -29,6 +29,10 @@ if __name__ == '__main__':
     train_writer = SummaryWriter(traindir)
     eval_writer = SummaryWriter(evaldir)
 
+    with open(os.path.join(config.logdir, "label_map.txt"), 'w') as f:
+        for item in config.label_map:
+            f.write("%s\n" % item)
+
     model = config.model
     model.to(DEVICE)
     model.train()
