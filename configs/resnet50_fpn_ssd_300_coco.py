@@ -42,7 +42,7 @@ batch_size = 32
 
 max_iterations = 750000
 
-debug_steps = 100
+debug_steps = 500
 val_steps = 5000
 
 logdir = os.path.join("resnet_fpn_ssd", datetime.datetime.now().strftime("%d-%m-%y_%H-%M"))
