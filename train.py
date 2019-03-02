@@ -17,7 +17,8 @@ if __name__ == '__main__':
     clip_norm = config.clip_norm if hasattr(config, 'clip_norm') else None
 
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if torch.cuda.is_available():
+    cudnn = config.cudnn if hasattr(config, 'clip_norm') else True
+    if torch.cuda.is_available() and cudnn:
         torch.backends.cudnn.benchmark = True
 
     savedir = os.path.join(config.logdir, "saved")
