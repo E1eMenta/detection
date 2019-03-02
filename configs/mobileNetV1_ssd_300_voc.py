@@ -50,8 +50,8 @@ test_transform = Compose([
     ImageToTensor()
 ])
 
-datasets_paths = ["/mnt/dataSSD/renat/VOCdevkit/VOC2007/", "/mnt/dataSSD/renat/VOCdevkit/VOC2012/"]
-validation_dataset = "/mnt/dataSSD/renat/VOCdevkit/VOC2007/"
+datasets_paths = ["path/to/VOCdevkit/VOC2007/", "path/to/VOCdevkit/VOC2012/"]
+validation_dataset = "path/to/VOCdevkit/VOC2007/"
 datasets = []
 for dataset_path in datasets_paths:
     dataset = VOCDataset(dataset_path, transform=train_transform)
@@ -75,7 +75,7 @@ criterion = MultiboxLoss(iou_threshold=0.5, neg_pos_ratio=3, variances=(0.1, 0.2
 
 # resume_path = ""
 # weights = torch.load(resume_path)
-# model.load_state_dict(weights.base_net.state_dict())
+# model.load_state_dict(weights.state_dict())
 
 # finetune_path = ""
 # model.finetune_from(finetune_path)

@@ -52,7 +52,7 @@ test_transform = Compose([
 ])
 
 
-root = "/home/renatkhiz/ram/mscoco"
+root = "path/to/mscoco"
 train_dataset = CocoDataset(root, set_name='train2017', transform=train_transform)
 val_dataset = CocoDataset(root, set_name='val2017', transform=test_transform)
 train_loader = DataLoader(train_dataset, batch_size,
@@ -72,7 +72,7 @@ criterion = MultiboxLoss(iou_threshold=0.5, neg_pos_ratio=3, variances=(0.1, 0.2
 
 # resume_path = ""
 # weights = torch.load(resume_path)
-# model.load_state_dict(weights.base_net.state_dict())
+# model.load_state_dict(weights.state_dict())
 
 # finetune_path = ""
 # model.finetune_from(finetune_path)

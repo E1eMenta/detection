@@ -53,7 +53,7 @@ test_transform = Compose([
 ])
 
 
-root = "/mnt/dataSSD/renat/ILSVRC2015_VID"
+root = "path/to/ILSVRC2015_VID"
 train_dataset = ImagenetVID(root, set_name='train', transform=train_transform)
 val_dataset = ImagenetVID(root, set_name='small_val', transform=test_transform)
 print(f"Val set length {len(val_dataset)}")
@@ -74,7 +74,7 @@ criterion = MultiboxLoss(iou_threshold=0.5, neg_pos_ratio=3, variances=(0.1, 0.2
 
 # resume_path = ""
 # weights = torch.load(resume_path)
-# model.load_state_dict(weights.base_net.state_dict())
+# model.load_state_dict(weights.state_dict())
 
 # finetune_path = ""
 # model.finetune_from(finetune_path)
