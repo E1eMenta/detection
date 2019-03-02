@@ -8,6 +8,8 @@ from torchvision.models import resnet50
 from pydet.head.ssd import SSDHead, AnchorCellCreator, SSDPostprocess
 from pydet.nn.fpn import FPN
 
+from utils import weight_init
+
 
 aspect_ratios = [
     [2, 1/2, 1, 3, 1/3],
@@ -101,6 +103,18 @@ class Resnet50_FPN_SSD(nn.Module):
         else:
             train_out = (conf, loc, anchors)
             return (train_out, SSDPostprocess(train_out))
+
+    def finetune_from(self, path):
+        weight_init(self)
+        weights = torch.load(path, map_location='cpu')
+        load_state = weights.state_dict()
+        own_state = self.state_dict()
+        for name, param in load_state.items():
+            if name not in own_state:
+                continue
+            if 'head' in name:
+                continue
+            own_state[name].copy_(param)
 
 # model = Resnet50_FPN_SSD(2)
 # x = torch.zeros((1, 3, 300, 300))
