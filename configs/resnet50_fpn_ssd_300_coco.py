@@ -4,15 +4,15 @@ import datetime
 
 import torch
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import _LRScheduler, CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 
 from models import Resnet50_FPN_SSD
 from pydet.criterion.ssd import MultiboxLoss
 
 from pydet.data import CocoDataset, detection_collate
-from pydet.data.transform import Compose, PhotometricDistort, Expand, RandomSSDCrop
-from pydet.data.transform import RandomMirror, Resize, Normalize, ChannelsFirst, ImageToTensor
+from pydet.data.transform import Compose, Expand, RandomSSDCrop, ChannelsFirst, ImageToTensor, PhotometricDistort
+from albumentations import HorizontalFlip, Normalize, Resize
 
 from pydet.validation import DetectionValidator
 
@@ -52,32 +52,28 @@ clip_norm = 10
 # Data
 #====================================================================================
 image_size = (300, 300)
-mean = [0, 0, 0]
-std = [255.0, 255.0, 255.0]
-
-
 torchvision_mean = [0.485, 0.456, 0.406]
 torchvision_std = [0.229, 0.224, 0.225]
 
 train_transform = Compose([
     PhotometricDistort(),
-    Expand(mean),
+    Expand([0, 0, 0]),
     RandomSSDCrop(),
-    RandomMirror(),
-    Resize(image_size),
-    Normalize(mean, std),
+    HorizontalFlip(),
+    Resize(height=image_size[0], width=image_size[1]),
     Normalize(torchvision_mean, torchvision_std),
     ChannelsFirst(),
     ImageToTensor()
-])
+], bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.3, 'label_fields': ['labels']})
 
 test_transform = Compose([
-    Resize(image_size),
-    Normalize(mean, std),
+    Resize(height=image_size[0], width=image_size[1]),
     Normalize(torchvision_mean, torchvision_std),
     ChannelsFirst(),
     ImageToTensor()
-])
+], bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.3, 'label_fields': ['labels']})
+
+
 
 
 root = "path/to/mscoco"
@@ -111,7 +107,7 @@ criterion = MultiboxLoss(iou_threshold=0.5, neg_pos_ratio=3, variances=(0.1, 0.2
 # Optimizer
 #====================================================================================
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=0.0001)
-scheduler = CosineAnnealingWarmup(optimizer, T_max=max_iterations)
+scheduler = CosineAnnealingLR(optimizer, T_max=max_iterations)
 
 
 # Validation

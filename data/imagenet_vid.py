@@ -65,17 +65,24 @@ class ImagenetVID(Dataset):
 
     def __getitem__(self, item):
         image = self.load_image(item)
-        boxes, labels = self.annotations[item]
-        height, width, channels = image.shape
-        boxes[:, 0] /= width
-        boxes[:, 2] /= width
-        boxes[:, 1] /= height
-        boxes[:, 3] /= height
+        bboxes, labels = self.annotations[item]
 
         if self.transform:
-            image, boxes, labels = self.transform(image, boxes, labels)
+            data = self.transform(image=image, bboxes=bboxes, labels=labels)
+            image, bboxes, labels = data["image"], data["bboxes"], data["labels"]
 
-        return image, (boxes, labels)
+        channels, height, width = image.shape
+        labels = np.array(labels, dtype=np.int64)
+        bboxes = np.array(bboxes, dtype=np.float32)
+        if len(bboxes) > 0:
+            bboxes[:, 0] /= width
+            bboxes[:, 2] /= width
+            bboxes[:, 1] /= height
+            bboxes[:, 3] /= height
+        else:
+            bboxes = np.zeros((0, 4), dtype=np.float32)
+
+        return image, (bboxes, labels)
 
 # dataset = ImagenetVID("/mnt/media2/renat/datasets/Imagenet_VID/ILSVRC2015_VID", "val")
 #

@@ -11,8 +11,8 @@ from pydet.criterion.ssd import MultiboxLoss
 
 from pydet.data import detection_collate
 from data.imagenet_vid import ImagenetVID
-from pydet.data.transform import Compose, PhotometricDistort, Expand, RandomSSDCrop
-from pydet.data.transform import RandomMirror, Resize, Normalize, ChannelsFirst, ImageToTensor
+from pydet.data.transform import Compose, Expand, RandomSSDCrop, ChannelsFirst, ImageToTensor, PhotometricDistort
+from albumentations import HorizontalFlip, Normalize, Resize
 
 from pydet.validation import DetectionValidator
 
@@ -38,19 +38,19 @@ train_transform = Compose([
     PhotometricDistort(),
     Expand(mean),
     RandomSSDCrop(),
-    RandomMirror(),
-    Resize(image_size),
-    Normalize(mean, std),
+    HorizontalFlip(),
+    Resize(height=image_size[0], width=image_size[1]),
+    Normalize(mean, std, max_pixel_value=1.0),
     ChannelsFirst(),
     ImageToTensor()
-])
+], bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.3, 'label_fields': ['labels']})
 
 test_transform = Compose([
-    Resize(image_size),
-    Normalize(mean, std),
+    Resize(height=image_size[0], width=image_size[1]),
+    Normalize(mean, std, max_pixel_value=1.0),
     ChannelsFirst(),
     ImageToTensor()
-])
+], bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.3, 'label_fields': ['labels']})
 
 
 root = "path/to/ILSVRC2015_VID"
