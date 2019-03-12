@@ -9,8 +9,8 @@ parser = argparse.ArgumentParser(description='Export trained detector')
 parser.add_argument('--config', required=True, type=str, help='Path to model config')
 parser.add_argument('--checkpoint', required=True, type=str, help='Path to model')
 parser.add_argument('--save', required=True, type=str, help='Path to save converte model')
-parser.add_argument('--type', default='torch', type=str, help="Type of converted model: 'onnx' or 'torch'. "
-                                                              "Default: 'torch'")
+parser.add_argument('--type', default='onnx', type=str, help="Type of converted model: 'onnx' or 'torch'. "
+                                                              "Default: 'onnx'")
 args = parser.parse_args()
 
 class ONNXWrapper(nn.Module):
@@ -19,7 +19,7 @@ class ONNXWrapper(nn.Module):
         self.model = model
 
     def forward(self, inputs):
-        _, model_out = self.model(inputs)
+        model_out, _ = self.model(inputs)
         return model_out
 
 if __name__ == '__main__':
@@ -37,6 +37,6 @@ if __name__ == '__main__':
         model = ONNXWrapper(model)
         model.eval()
         output_example = model(inputs)
-        torch.onnx._export(model, inputs, args.save, verbose=True)
+        torch.onnx._export(model, inputs, args.save, export_params=True, verbose=True)
     else:
         raise Exception('Export type "{}" is unsupported'.format(args.type))
