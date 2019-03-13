@@ -47,7 +47,7 @@ val_steps = 5000
 
 logdir = os.path.join("resnet_fpn_ssd", datetime.datetime.now().strftime("%d-%m-%y_%H-%M"))
 
-cudnn = False
+cudnn = True
 clip_norm = 10
 # Data
 #====================================================================================
