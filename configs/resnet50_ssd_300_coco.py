@@ -58,10 +58,10 @@ root = "/path/to/mscoco"
 train_dataset = CocoDataset(root, set_name='train2017', transform=train_transform)
 val_dataset = CocoDataset(root, set_name='val2017', transform=test_transform)
 train_loader = DataLoader(train_dataset, batch_size,
-                          num_workers=4,
+                          num_workers=4, pin_memory=True,
                           shuffle=True, collate_fn=detection_collate)
 val_loader = DataLoader(val_dataset, batch_size,
-                        num_workers=4,
+                        num_workers=4, pin_memory=True,
                         shuffle=False, collate_fn=detection_collate)
 
 num_classes = len(train_dataset.class_names)
