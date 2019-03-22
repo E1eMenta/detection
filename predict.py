@@ -4,58 +4,35 @@ import json
 import torch
 import argparse
 import numpy as np
+import torch.nn as nn
 
 from pydet.utils.numpy import postprocess
 from pydet.utils.vis import draw_boxes
-from pydet.data.transform import Compose, Normalize, ChannelsFirst, ImageToTensor
+from pydet.data.transform import  ChannelsFirst, ImageToTensor, PadToAspectRatio
+from albumentations import Compose, Normalize, Resize
 
 parser = argparse.ArgumentParser(description='Run detector on data')
 parser.add_argument('--checkpoint', required=True, type=str, help='Path to model')
 parser.add_argument('--folder', required=True, type=str, help='Path to model')
 parser.add_argument('--label_map', required=True, type=str, help='Path to label map')
-parser.add_argument('--preprocess', type=str, default="pad_resizer", help='Image preprocessing function.'
-                                                                          'Allowed: pad_resizer, fixed_resizer')
-parser.add_argument('--height', default=300, type=int, help='Height of resized image')
-parser.add_argument('--width', default=300, type=int, help='Width of resized image')
 parser.add_argument('--bs', default=32, type=int, help='Batch size of images')
 parser.add_argument('--logdir', type=str, help='Path to folder, where to save logs')
 parser.add_argument('--show', default=False, type=bool, help='Show detections')
+
+#Prepocess flags
+parser.add_argument('--preprocess', type=str, default="pad_resizer", help='Image preprocessing function.'                                                                          'Allowed: pad_resizer, fixed_resizer')
+parser.add_argument('--height', default=300, type=int, help='Height of resized image')
+parser.add_argument('--width', default=300, type=int, help='Width of resized image')
+# Get next parameters from config file in Normalize fn
+parser.add_argument('--mean', default="0.485;0.456;0.406", type=str, help='Image normalization: mean of normalization'
+                                                                          'Default: 0.229;0.224;0.225')
+parser.add_argument('--std', default="0.229;0.224;0.225", type=str, help='Image normalization: std of normalization'
+                                                                         'Default: 0.229;0.224;0.225')
+parser.add_argument('--max_pixel_value', default=255.0, type=float, help='Image normalization: maximum possible pixel value.'
+                                                                         'Default: 255.0')
+
+
 args = parser.parse_args()
-
-class FixedResizer:
-    def __init__(self, height, width, interpolation=cv2.INTER_AREA):
-        self.height = height
-        self.width = width
-        self.interpolation = interpolation
-
-    def __call__(self, image):
-        image = cv2.resize(image, (self.width, self.height), interpolation=self.interpolation)
-        return image
-
-class PadResizer:
-    def __init__(self, height, width, border_value=[0, 0, 0], interpolation=cv2.INTER_AREA):
-        self.height = height
-        self.width = width
-        self.border_value = border_value
-        self.interpolation = interpolation
-
-    def __call__(self, image):
-        src_height, src_width, _ = image.shape
-
-        dst_ar = self.width / self.height
-        src_ar = src_width / src_height
-        if dst_ar > src_ar:
-            bottom = 0
-            right = int(src_ar * src_height - src_width)
-        else:
-            bottom = int(src_width / src_ar - src_height)
-            right = 0
-
-        padded_image = cv2.copyMakeBorder(image, top=0, bottom=bottom, left=0, right=right,
-                                          borderType=cv2.BORDER_CONSTANT, value=self.border_value)
-
-        resized_image = cv2.resize(padded_image, (self.width, self.height), interpolation=self.interpolation)
-        return resized_image
 
 
 class BaseTransform:
@@ -77,11 +54,20 @@ def isImage(path):
     ext = ext.lower()
     return ext in exts
 
+class PredictionWrapper(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, x):
+        _, outs = self.model(x)
+        return outs
+
 
 if __name__ == '__main__':
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = torch.load(args.checkpoint, map_location='cpu')
+    model = PredictionWrapper(torch.load(args.checkpoint, map_location='cpu'))
     model = model.to(DEVICE)
     model = torch.nn.DataParallel(model)
     model.eval()
@@ -94,31 +80,41 @@ if __name__ == '__main__':
     image_paths = [os.path.join(dp, f) for dp, dn, fn in os.walk(args.folder) for f in fn if isImage(f)]
     image_chunks = [image_paths[i:i + args.bs] for i in range(0, len(image_paths), args.bs)]
 
-    mean = [127, 127, 127]
-    std = [128.0, 128.0, 128.0]
+    mean = [float(value) for value in args.mean.split(";")]
+    std = [float(value) for value in args.std.split(";")]
 
-    base = BaseTransform(mean, std)
 
     if args.preprocess == "fixed_resizer":
-        transform = FixedResizer(args.height, args.width)
+        resizer = Resize(args.height, args.width)
     elif args.preprocess == "pad_resizer":
-        transform = PadResizer(args.height, args.width, border_value=mean)
+        resizer = Compose([
+            PadToAspectRatio(args.width/args.height),
+            Resize(args.height, args.width)
+        ])
+    else:
+        raise Exception(f"Resizer {args.preprocess} is not supported")
+    transform = Compose([
+        resizer,
+        Normalize(mean, std, max_pixel_value=args.max_pixel_value),
+        ChannelsFirst(),
+        ImageToTensor()
+    ])
 
     with torch.no_grad():
         for image_path_chunk in image_chunks:
-            images_batch = [cv2.imread(image_path) for image_path in image_path_chunk]
-            prep_images = [transform(image.astype(np.float32)) for image in images_batch]
-            prep_images = [base(image) for image in prep_images]
+            images_batch = [cv2.imread(image_path, ) for image_path in image_path_chunk]
 
+            prep_images = [cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32) for image in images_batch]
+            prep_images = [transform(image=image)["image"] for image in images_batch]
             prep_images = torch.stack(prep_images)
             prep_images = prep_images.to(DEVICE)
 
-            _, (boxes, labels, scores) = model(prep_images)
+            boxes, labels, scores = model(prep_images)
             boxes = boxes.cpu().numpy()
             labels = labels.cpu().numpy()
             scores = scores.cpu().numpy()
 
-            boxes, labels, scores = postprocess(boxes, labels, scores, score_thresh=0.6)
+            boxes, labels, scores = postprocess(boxes, labels, scores, score_thresh=0.5)
 
             if args.show:
                 for boxes_i, labels_i, scores_i, image in zip(boxes, labels, scores, images_batch):
