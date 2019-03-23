@@ -19,6 +19,7 @@ aspect_ratios = [
     [2, 1/2, 1],
     [2, 1/2, 1]
 ]
+image_size = (300, 300)
 sizes = [
     (38, 38),
     (19, 19),
@@ -76,6 +77,10 @@ class Resnet50_FPN_SSD(nn.Module):
 
 
     def forward(self, x):
+        _, _, h, w = x.shape
+        if h != image_size[0] or w != image_size[1]:
+            raise Exception(f"Image should have size ({image_size[0]}, {image_size[1]}) instead of ({h}, {w})."
+                            f"Change 'sizes' and 'image_size' vars to fix it")
         outs = []
         x = self.conv1(x)
         x = self.bn1(x)

@@ -17,6 +17,7 @@ aspect_ratios = [
     [2, 1/2, 1, 3, 1/3],
     [2, 1/2, 1, 3, 1/3]
 ]
+image_size = (300, 300)
 sizes = [
     (19, 19),
     (10, 10),
@@ -70,6 +71,10 @@ class MobileNetV1SSD(nn.Module):
         )
 
     def forward(self, x: torch.Tensor):
+        _, _, h, w = x.shape
+        if h != image_size[0] or w != image_size[1]:
+            raise Exception(f"Image should have size ({image_size[0]}, {image_size[1]}) instead of ({h}, {w})."
+                            f"Change 'sizes' and 'image_size' vars to fix it")
         start_layer_index = 0
         outs = []
         for end_layer_index in self.source_layer_indexes:
