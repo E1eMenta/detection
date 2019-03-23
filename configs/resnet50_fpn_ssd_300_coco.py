@@ -16,25 +16,6 @@ from albumentations import HorizontalFlip, Normalize, Resize
 
 from pydet.validation import DetectionValidator
 
-class CosineAnnealingWarmup(_LRScheduler):
-
-    def __init__(self, optimizer, T_max, eta_min=0, last_epoch=-1, T_warmup=0, alfa=1/3):
-        self.T_max = T_max
-        self.eta_min = eta_min
-        self.T_warmup = T_warmup
-        self.alfa = alfa
-        super().__init__(optimizer, last_epoch)
-
-    def get_lr(self):
-        if self.last_epoch < self.T_warmup:
-            min_lrs = [self.alfa * base_lr for base_lr in self.base_lrs]
-            lrs = [min_lr + (base_lr - min_lr) * self.last_epoch / self.T_warmup
-                for base_lr, min_lr in zip(self.base_lrs, min_lrs)]
-            return lrs
-        else:
-            return [self.eta_min + (base_lr - self.eta_min) *
-                    (1 + math.cos(math.pi * (self.last_epoch - self.T_warmup) / self.T_max)) / 2
-                    for base_lr in self.base_lrs]
 
 # General
 #====================================================================================
