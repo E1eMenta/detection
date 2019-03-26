@@ -34,20 +34,6 @@ parser.add_argument('--max_pixel_value', default=255.0, type=float, help='Image 
 
 args = parser.parse_args()
 
-
-class BaseTransform:
-    def __init__(self, mean, std):
-        self.transform = Compose([
-            Normalize(mean, std),
-            ChannelsFirst(),
-            ImageToTensor()
-        ])
-
-    def __call__(self, image):
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image, _, _ = self.transform(image, None, None)
-        return image
-
 def isImage(path):
     exts = ['.png', '.jpg', '.jpeg', '.gif', '.png']
     _, ext = os.path.splitext(path)
@@ -84,9 +70,9 @@ if __name__ == '__main__':
     std = [float(value) for value in args.std.split(";")]
 
 
-    if args.preprocess == "fixed_resizer":
+    if args.preprocess == "fixed":
         resizer = Resize(args.height, args.width)
-    elif args.preprocess == "pad_resizer":
+    elif args.preprocess == "pad":
         resizer = Compose([
             PadToAspectRatio(args.width/args.height),
             Resize(args.height, args.width)
@@ -105,7 +91,7 @@ if __name__ == '__main__':
             images_batch = [cv2.imread(image_path, ) for image_path in image_path_chunk]
 
             prep_images = [cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32) for image in images_batch]
-            prep_images = [transform(image=image)["image"] for image in images_batch]
+            prep_images = [transform(image=image)["image"] for image in prep_images]
             prep_images = torch.stack(prep_images)
             prep_images = prep_images.to(DEVICE)
 
