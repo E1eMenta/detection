@@ -18,19 +18,8 @@ parser.add_argument('--label_map', required=True, type=str, help='Path to label 
 parser.add_argument('--bs', default=32, type=int, help='Batch size of images')
 parser.add_argument('--logdir', type=str, help='Path to folder, where to save logs')
 parser.add_argument('--show', default=False, type=bool, help='Show detections')
-
 #Prepocess flags
-parser.add_argument('--preprocess', type=str, default="pad_resizer", help='Image preprocessing function.'                                                                          'Allowed: pad_resizer, fixed_resizer')
-parser.add_argument('--height', default=300, type=int, help='Height of resized image')
-parser.add_argument('--width', default=300, type=int, help='Width of resized image')
-# Get next parameters from config file in Normalize fn
-parser.add_argument('--mean', default="0.485;0.456;0.406", type=str, help='Image normalization: mean of normalization'
-                                                                          'Default: 0.229;0.224;0.225')
-parser.add_argument('--std', default="0.229;0.224;0.225", type=str, help='Image normalization: std of normalization'
-                                                                         'Default: 0.229;0.224;0.225')
-parser.add_argument('--max_pixel_value', default=255.0, type=float, help='Image normalization: maximum possible pixel value.'
-                                                                         'Default: 255.0')
-
+parser.add_argument('--preprocess', type=str, default="pad", help='Image preprocessing function.')
 
 args = parser.parse_args()
 
@@ -53,10 +42,18 @@ class PredictionWrapper(nn.Module):
 if __name__ == '__main__':
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = PredictionWrapper(torch.load(args.checkpoint, map_location='cpu'))
+    module = torch.load(args.checkpoint, map_location='cpu')
+    model = PredictionWrapper(module)
     model = model.to(DEVICE)
     model = torch.nn.DataParallel(model)
     model.eval()
+
+    height = module.image_size[0]
+    width = module.image_size[0]
+    mean = module.mean
+    std = module.std
+    max_pixel_value = module.max_pixel_value
+
 
     with open(args.label_map) as f:
         label_map = f.readlines()
@@ -66,22 +63,19 @@ if __name__ == '__main__':
     image_paths = [os.path.join(dp, f) for dp, dn, fn in os.walk(args.folder) for f in fn if isImage(f)]
     image_chunks = [image_paths[i:i + args.bs] for i in range(0, len(image_paths), args.bs)]
 
-    mean = [float(value) for value in args.mean.split(";")]
-    std = [float(value) for value in args.std.split(";")]
-
 
     if args.preprocess == "fixed":
-        resizer = Resize(args.height, args.width)
+        resizer = Resize(height, width)
     elif args.preprocess == "pad":
         resizer = Compose([
-            PadToAspectRatio(args.width/args.height),
-            Resize(args.height, args.width)
+            PadToAspectRatio(width/height),
+            Resize(height, width)
         ])
     else:
         raise Exception(f"Resizer {args.preprocess} is not supported")
     transform = Compose([
         resizer,
-        Normalize(mean, std, max_pixel_value=args.max_pixel_value),
+        Normalize(mean, std, max_pixel_value),
         ChannelsFirst(),
         ImageToTensor()
     ])
@@ -109,8 +103,6 @@ if __name__ == '__main__':
                     cv2.waitKey()
 
             if args.logdir:
-                root = args.folder
-
                 for i in range(len(images_batch)):
                     path = image_path_chunk[i]
                     boxes_i = boxes[i]
@@ -124,7 +116,7 @@ if __name__ == '__main__':
                     boxes_i[:, 2] *= width
                     boxes_i[:, 3] *= height
 
-                    path = os.path.relpath(path, root)
+                    path = os.path.relpath(path, args.folder)
                     path = os.path.join(args.logdir, path)
                     path, _ = os.path.splitext(path)
                     path = path + ".json"
