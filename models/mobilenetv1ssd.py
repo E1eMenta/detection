@@ -9,25 +9,31 @@ from .backbones import MobileNetV1
 from pydet.head.ssd import SSDHead, AnchorCellCreator, SSDPostprocess
 
 
-aspect_ratios = [
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3]
-]
-image_size = (300, 300)
-sizes = [
-    (19, 19),
-    (10, 10),
-    (5, 5),
-    (3, 3),
-    (2, 2),
-    (1, 1),
-]
 
 class MobileNetV1SSD(nn.Module):
+    image_size = (300, 300)
+
+    mean = [127, 127, 127]
+    std = [128.0, 128.0, 128.0]
+    max_pixel_value = 1.0
+
+    aspect_ratios = [
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3]
+    ]
+    sizes = [
+        (19, 19),
+        (10, 10),
+        (5, 5),
+        (3, 3),
+        (2, 2),
+        (1, 1),
+    ]
+
     def __init__(self, num_classes: int):
         super().__init__()
 
@@ -66,13 +72,19 @@ class MobileNetV1SSD(nn.Module):
         self.head = SSDHead(
             num_classes,
             [512, 1024, 512, 256, 256, 256],
-            sizes,
-            AnchorCellCreator(aspect_ratios, smin=0.2, smax=0.95)
+            self.sizes,
+            AnchorCellCreator(self.aspect_ratios, smin=0.2, smax=0.95)
         )
+
+    @staticmethod
+    def get_norm_params():
+        return {"mean": [127, 127, 127],
+                "std": [128.0, 128.0, 128.0],
+                "max_pixel_value": 1.0}
 
     def forward(self, x: torch.Tensor):
         _, _, h, w = x.shape
-        if h != image_size[0] or w != image_size[1]:
+        if h != self.image_size[0] or w != self.image_size[1]:
             raise Exception(f"Image should have size ({image_size[0]}, {image_size[1]}) instead of ({h}, {w})."
                             f"Change 'sizes' and 'image_size' vars to fix it")
         start_layer_index = 0

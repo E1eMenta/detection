@@ -10,25 +10,29 @@ from pydet.head.ssd import SSDHead, AnchorCellCreator, SSDPostprocess
 from utils import weight_init
 
 
-aspect_ratios = [
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1],
-    [2, 1/2, 1]
-]
-image_size = (300, 300)
-sizes = [
-    (38, 38),
-    (19, 19),
-    (10, 10),
-    (5, 5),
-    (3, 3),
-    (1, 1)
-]
-
 class Resnet50_SSD(nn.Module):
+    image_size = (300, 300)
+
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    max_pixel_value = 255.0
+
+    aspect_ratios = [
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1],
+        [2, 1 / 2, 1]
+    ]
+    sizes = [
+        (38, 38),
+        (19, 19),
+        (10, 10),
+        (5, 5),
+        (3, 3),
+        (1, 1)
+    ]
     def __init__(self, num_classes):
         super().__init__()
         self.num_classes = num_classes

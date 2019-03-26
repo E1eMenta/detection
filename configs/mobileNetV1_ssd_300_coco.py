@@ -29,9 +29,11 @@ logdir = os.path.join("mobilenet_ssd", datetime.datetime.now().strftime("%d-%m-%
 
 # Data
 #====================================================================================
-image_size = (300, 300)
-mean = [127, 127, 127]
-std = [128.0, 128.0, 128.0]
+model_class = MobileNetV1SSD
+image_size = model_class.image_size
+mean = model_class.mean
+std = model_class.std
+max_pixel_value = model_class.max_pixel_value
 
 train_transform = Compose([
     PhotometricDistort(),
@@ -39,14 +41,14 @@ train_transform = Compose([
     RandomSSDCrop(),
     HorizontalFlip(),
     Resize(height=image_size[0], width=image_size[1]),
-    Normalize(mean, std, max_pixel_value=1.0),
+    Normalize(mean, std, max_pixel_value),
     ChannelsFirst(),
     ImageToTensor()
 ], bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.3, 'label_fields': ['labels']})
 
 test_transform = Compose([
     Resize(height=image_size[0], width=image_size[1]),
-    Normalize(mean, std, max_pixel_value=1.0),
+    Normalize(mean, std, max_pixel_value),
     ChannelsFirst(),
     ImageToTensor()
 ], bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.3, 'label_fields': ['labels']})

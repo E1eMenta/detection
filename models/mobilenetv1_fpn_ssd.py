@@ -9,25 +9,31 @@ from .backbones import MobileNetV1
 from pydet.head.ssd import SSDHead, AnchorCellCreator, SSDPostprocess
 from pydet.nn.fpn import FPN
 
-aspect_ratios = [
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3],
-    [2, 1/2, 1, 3, 1/3]
-]
-image_size = (300, 300)
-sizes = [
-    (19, 19),
-    (10, 10),
-    (5, 5),
-    (3, 3),
-    (2, 2),
-    (1, 1),
-]
 
 class MobileNetV1_FPN_SSD(nn.Module):
+    image_size = (300, 300)
+
+    mean = [127, 127, 127]
+    std = [128.0, 128.0, 128.0]
+    max_pixel_value = 1.0
+
+    aspect_ratios = [
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3],
+        [2, 1 / 2, 1, 3, 1 / 3]
+    ]
+    sizes = [
+        (19, 19),
+        (10, 10),
+        (5, 5),
+        (3, 3),
+        (2, 2),
+        (1, 1),
+    ]
+
     def __init__(self, num_classes: int):
         super().__init__()
 

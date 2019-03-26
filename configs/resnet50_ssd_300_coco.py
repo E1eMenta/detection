@@ -32,9 +32,11 @@ cudnn = True
 clip_norm = 10
 # Data
 #====================================================================================
-image_size = (300, 300)
-torchvision_mean = [0.485, 0.456, 0.406]
-torchvision_std = [0.229, 0.224, 0.225]
+model_class = Resnet50_SSD
+image_size = model_class.image_size
+mean = model_class.mean
+std = model_class.std
+max_pixel_value = model_class.max_pixel_value
 
 train_transform = Compose([
     PhotometricDistort(),
@@ -42,14 +44,14 @@ train_transform = Compose([
     RandomSSDCrop(),
     HorizontalFlip(),
     Resize(height=image_size[0], width=image_size[1]),
-    Normalize(torchvision_mean, torchvision_std),
+    Normalize(mean, std, max_pixel_value),
     ChannelsFirst(),
     ImageToTensor()
 ], bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.3, 'label_fields': ['labels']})
 
 test_transform = Compose([
     Resize(height=image_size[0], width=image_size[1]),
-    Normalize(torchvision_mean, torchvision_std),
+    Normalize(mean, std, max_pixel_value),
     ChannelsFirst(),
     ImageToTensor()
 ], bbox_params={'format': 'pascal_voc', 'min_area': 0, 'min_visibility': 0.3, 'label_fields': ['labels']})
