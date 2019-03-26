@@ -76,15 +76,15 @@ class Resnet50_FPN_SSD(nn.Module):
         self.head = SSDHead(
             num_classes,
             out_channels_list,
-            sizes,
-            AnchorCellCreator(aspect_ratios, smin=0.1, smax=0.95)
+            self.sizes,
+            AnchorCellCreator(self.aspect_ratios, smin=0.1, smax=0.95)
         )
 
 
     def forward(self, x):
         _, _, h, w = x.shape
-        if h != image_size[0] or w != image_size[1]:
-            raise Exception(f"Image should have size ({image_size[0]}, {image_size[1]}) instead of ({h}, {w})."
+        if h != self.image_size[0] or w != self.image_size[1]:
+            raise Exception(f"Image should have size ({self.image_size[0]}, {self.image_size[1]}) instead of ({h}, {w})."
                             f"Change 'sizes' and 'image_size' vars to fix it")
         outs = []
         x = self.conv1(x)

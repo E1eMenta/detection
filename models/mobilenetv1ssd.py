@@ -85,7 +85,7 @@ class MobileNetV1SSD(nn.Module):
     def forward(self, x: torch.Tensor):
         _, _, h, w = x.shape
         if h != self.image_size[0] or w != self.image_size[1]:
-            raise Exception(f"Image should have size ({image_size[0]}, {image_size[1]}) instead of ({h}, {w})."
+            raise Exception(f"Image should have size ({self.image_size[0]}, {self.image_size[1]}) instead of ({h}, {w})."
                             f"Change 'sizes' and 'image_size' vars to fix it")
         start_layer_index = 0
         outs = []
